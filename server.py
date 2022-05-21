@@ -26,7 +26,7 @@ _____________________________________
 """
 
 
-@hetch_translator.route("/hetch-translator/convert/<from_amount>/<to_currency>", methods=["GET"])
+@hetch_translator.route("/translator/translate/<from_amount>/<to_currency>", methods=["GET"])
 def convert_a_currency(from_amount: str, to_currency: str) -> str:
     try:
         from_amount = float(from_amount)
@@ -73,7 +73,7 @@ _____________________________________
 """
 
 
-@hetch_translator.route("/hetch-translator/", methods=["GET"])
+@hetch_translator.route("/translator/all", methods=["GET"])
 def list_all_currencies():
     # normal and crypto currencies
     n_currencies = get("https://openexchangerates.org/api/currencies.json")
