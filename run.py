@@ -1,4 +1,4 @@
 from server import hetch_translator
 
 if __name__ == '__main__':
-    hetch_translator.run(port=4500)
+    hetch_translator.run(port=4002)
