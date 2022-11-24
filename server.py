@@ -12,12 +12,14 @@ from requests import get
 from dotenv import load_dotenv
 from models.response import Response
 from os import environ
+from flask_cors import CORS, cross_origin
+from random_utilities import log
 
 from dotenv import load_dotenv
 load_dotenv()
 
 hetch_translator = Flask(__name__)
-
+CORS(hetch_translator, resources={r"*": {"origins": "*"}})
 
 """
 _____________________________________
@@ -27,6 +29,7 @@ _____________________________________
 
 
 @hetch_translator.route("/translator/translate/<from_amount>/<to_currency>", methods=["GET"])
+@cross_origin()
 def convert_a_currency(from_amount: str, to_currency: str) -> str:
     try:
         from_amount = float(from_amount)
@@ -34,36 +37,31 @@ def convert_a_currency(from_amount: str, to_currency: str) -> str:
         return Response(cd=400, rs="Invalid conversion amount provided.").to_json()
     to_currency = to_currency.upper()
 
-    r_currencies = get("https://openexchangerates.org/api/currencies.json")
-    if r_currencies.status_code:
-        currencies = r_currencies.json()
-        currency_keys = currencies.keys()
-
-        r_ex_rate = get(
-            f'https://api.coingate.com/v2/rates/merchant/USD/{to_currency}')
-        try:
-            exchange_rate = float(r_ex_rate.text)
-        except:
-            oex_rates_r = get(f'https://openexchangerates.org/api/latest.json?app_id={environ["OE_KEY"]}')
-            if oex_rates_r.status_code == 200:
-                oex_data = oex_rates_r.json()
-                oex_keys = oex_data["rates"].keys()
-                if to_currency in oex_keys:
-                    exchange_rate = oex_data["rates"][to_currency]
-                else:
-                    return Response(cd=400, rs="Unsupported currency.").to_json()
+    r_ex_rate = get(
+        f'https://api.coingate.com/v2/rates/merchant/USD/{to_currency}')
+    try:
+        exchange_rate = float(r_ex_rate.text)
+    except:
+        oex_rates_r = get(f'https://openexchangerates.org/api/latest.json?app_id={environ["OE_KEY"]}')
+        if oex_rates_r.status_code == 200:
+            oex_data = oex_rates_r.json()
+            oex_keys = oex_data["rates"].keys()
+            if to_currency in oex_keys:
+                exchange_rate = oex_data["rates"][to_currency]
             else:
-                return Response(cd=500, rs="Something went wrong.").to_json()
-                
-        r_data = dict(
-            to_currency=to_currency, from_currency="USD",
-            exchange_rate=exchange_rate, from_amount=from_amount,
-            to_amount=(from_amount * exchange_rate)
-        )
+                return Response(cd=400, rs="Unsupported currency.").to_json()
+        else:
+            return Response(cd=500, rs="Something went wrong.").to_json()
+            
+    r_data = dict(
+        to_currency=to_currency, from_currency="USD",
+        exchange_rate=exchange_rate, from_amount=from_amount,
+        to_amount=(from_amount * exchange_rate)
+    )
 
-        return Response(cd=200, dt=r_data).to_json()
-    else:
-        return Response(cd=500, rs="Something went wrong.").to_json()
+    log(r_data)
+    return Response(cd=200, dt=r_data).to_json()
+
 
 
 """
@@ -74,6 +72,7 @@ _____________________________________
 
 
 @hetch_translator.route("/translator/all", methods=["GET"])
+@cross_origin()
 def list_all_currencies():
     # normal and crypto currencies
     n_currencies = get("https://openexchangerates.org/api/currencies.json")
@@ -85,6 +84,8 @@ def list_all_currencies():
     for c_currency in c_currencies.json():
         c_formatted[c_currency["symbol"]] = c_currency["title"]
 
-    dt = {**n_currencies.json(), **c_formatted}
-    del dt["VEF"]
-    return Response(cd=200, dt=dt).to_json()
+    all = {**n_currencies.json(), **c_formatted}
+    # del dt["VEF"]
+
+    log(all)
+    return Response(cd=200, dt=all).to_json()
