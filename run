@@ -1,0 +1,5 @@
+#!/usr/bin/env zsh
+# Libby Lebyane
+
+source ./.venv/bin/activate # Select app environment
+flask run -p 4001 # Run flask app
