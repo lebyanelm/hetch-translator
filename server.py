@@ -7,6 +7,7 @@ _______________________________________
 """
 
 # Dependencies
+import traceback
 from flask import Flask
 from requests import get
 from dotenv import load_dotenv
@@ -16,6 +17,7 @@ from flask_cors import CORS, cross_origin
 from random_utilities import log
 
 from dotenv import load_dotenv
+
 load_dotenv()
 
 hetch_translator = Flask(__name__)
@@ -28,40 +30,39 @@ _____________________________________
 """
 
 
-@hetch_translator.route("/translator/translate/<from_amount>/<to_currency>", methods=["GET"])
+@hetch_translator.route(
+    "/translator/translate/<_from_amount>/<_from_currency>/<_to_currency>",
+    methods=["GET"],
+)
 @cross_origin()
-def convert_a_currency(from_amount: str, to_currency: str) -> str:
+def convert_a_currency(_from_amount: str, _from_currency: str, _to_currency: str):
     try:
-        from_amount = float(from_amount)
-    except:
-        return Response(cd=400, rs="Invalid conversion amount provided.").to_json()
-    to_currency = to_currency.upper()
+        from_amount = float(_from_amount)
+        conversion_response = get(
+            f'https://api.fastforex.io/convert?from={_from_currency}&to={_to_currency}&amount={_from_amount}&api_key={environ["FASTFOREX_KEY"]}'
+        )
 
-    r_ex_rate = get(
-        f'https://api.coingate.com/v2/rates/merchant/USD/{to_currency}')
-    try:
-        exchange_rate = float(r_ex_rate.text)
-    except:
-        oex_rates_r = get(f'https://openexchangerates.org/api/latest.json?app_id={environ["OE_KEY"]}')
-        if oex_rates_r.status_code == 200:
-            oex_data = oex_rates_r.json()
-            oex_keys = oex_data["rates"].keys()
-            if to_currency in oex_keys:
-                exchange_rate = oex_data["rates"][to_currency]
-            else:
-                return Response(cd=400, rs="Unsupported currency.").to_json()
+        if conversion_response.status_code == 200:
+            conversion = conversion_response.json()["result"]
+            print(conversion)
+            return Response(
+                cd=200,
+                dt=dict(
+                    to_currency=_to_currency,
+                    from_currency=_from_currency,
+                    exchange_rate=conversion["rate"],
+                    from_amount=from_amount,
+                    to_amount=conversion[_to_currency],
+                ),
+            ).to_json()
         else:
+            print("Error:", traceback.format_exc())
             return Response(cd=500, rs="Something went wrong.").to_json()
-            
-    r_data = dict(
-        to_currency=to_currency, from_currency="USD",
-        exchange_rate=exchange_rate, from_amount=from_amount,
-        to_amount=(from_amount * exchange_rate)
-    )
-
-    log(r_data)
-    return Response(cd=200, dt=r_data).to_json()
-
+    except:
+        log(traceback.format_exc())
+        return Response(
+            cd=400, rs="Something went wrong while accepting the conversion amount."
+        ).to_json()
 
 
 """
@@ -75,17 +76,35 @@ _____________________________________
 @cross_origin()
 def list_all_currencies():
     # normal and crypto currencies
-    n_currencies = get("https://openexchangerates.org/api/currencies.json")
-    c_currencies = get(
-        "https://api.coingate.com/v2/currencies?native=true&enabled=true&kind=crypto")
+    # n_currencies = get("https://openexchangerates.org/api/currencies.json")
+    # c_currencies = get(
+    #     "https://api.coingate.com/v2/currencies?native=true&enabled=true&kind=crypto"
+    # )
 
     # format the crypto currency data
-    c_formatted = {}
-    for c_currency in c_currencies.json():
-        c_formatted[c_currency["symbol"]] = c_currency["title"]
+    # c_formatted = {}
+    # for c_currency in c_currencies.json():
+    #     c_formatted[c_currency["symbol"]] = c_currency["title"]
 
-    all = {**n_currencies.json(), **c_formatted}
+    # all = {**n_currencies.json(), **c_formatted}
+    # print(all)
     # del dt["VEF"]
 
-    log(all)
+    all = dict(
+        ZAR=dict(name="South African Rand", symbol="R"),
+        USD=dict(name="United States Dollar", symbol="$"),
+        CAD=dict(name="Canadian Dollar", symbol="C$"),
+        AUD=dict(name="Australian Dollar", symbol="A$"),
+        EUR=dict(name="European Euro", symbol="€"),
+        JPY=dict(name="Japanese Yen", symbol="¥"),
+        CHF=dict(name="Swiss Fanc", symbol="Fr."),
+        CNY=dict(name="Chinese Yuan", symbol="¥"),
+        SEK=dict(name="Swedish Krona", symbol="kr."),
+        INR=dict(name="Indian Rupe", symbol="₹"),
+        BTC=dict(name="Bitcoin", symbol="₿"),
+        LTC=dict(name="Litecoin", symbol="Ł"),
+        ETH=dict(name="Etherium", symbol="Ξ"),
+        ADA=dict(name="Cardano", symbol="₳"),
+    )
+
     return Response(cd=200, dt=all).to_json()
