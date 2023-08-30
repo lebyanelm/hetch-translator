@@ -39,18 +39,15 @@ def convert_a_currency(_from_amount: str, _from_currency: str, _to_currency: str
     try:
         from_amount = float(_from_amount)
 
-        print(from_amount == 0)
         if from_amount == 0:
             from_amount = 1
 
         conversion_response = get(
             f'https://api.fastforex.io/convert?from={_from_currency}&to={_to_currency}&amount={str(from_amount)}&api_key={environ["FASTFOREX_KEY"]}'
         )
-        print(conversion_response.json())
 
         if conversion_response.status_code == 200:
             conversion = conversion_response.json()["result"]
-            print(conversion)
             return Response(
                 cd=200,
                 dt=dict(
@@ -62,7 +59,7 @@ def convert_a_currency(_from_amount: str, _from_currency: str, _to_currency: str
                 ),
             ).to_json()
         else:
-            print("Error:", traceback.format_exc())
+            log("Error:", traceback.format_exc())
             return Response(cd=500, rs="Something went wrong.").to_json()
     except:
         log(traceback.format_exc())
