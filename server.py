@@ -55,9 +55,7 @@ def convert_a_currency(_from_amount: str, _from_currency: str, _to_currency: str
                     from_currency=_from_currency,
                     exchange_rate=latest_conversions["data"][_to_currency],
                     from_amount=_from_amount,
-                    to_amount=0
-                    if _from_amount == "0"
-                    else latest_conversions["data"][_from_currency] * from_amount,
+                    to_amount=latest_conversions["data"][_to_currency] * from_amount,
                 ),
             ).to_json()
         else:
