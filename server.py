@@ -10,7 +10,6 @@ _______________________________________
 import traceback
 import freecurrencyapi
 from flask import Flask
-from requests import get
 from dotenv import load_dotenv
 from models.response import Response
 from os import environ
